@@ -29,13 +29,6 @@ jobs:
     # A hung job otherwise burns quota until GitHub's six-hour ceiling.
     timeout-minutes: 20
 
-    # THE FLUTTER APP IS NOT AT THE REPOSITORY ROOT. It lives in
-    # finance_tracker/, so every command below has to run from there or it
-    # fails looking for a pubspec.yaml that is one directory down.
-    defaults:
-      run:
-        working-directory: finance_tracker
-
     steps:
       - name: Check out the repository
         uses: actions/checkout@v5
