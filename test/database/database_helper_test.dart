@@ -19,6 +19,7 @@ void main() {
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+    DatabaseHelper.dbName = 'database_helper_test.db';
   });
 
   late CategoryDao categoryDao;
@@ -30,7 +31,7 @@ void main() {
   setUp(() async {
     // Start every test from a clean database.
     await DatabaseHelper.instance.close();
-    final path = join(await databaseFactory.getDatabasesPath(), 'finance_tracker.db');
+    final path = join(await databaseFactory.getDatabasesPath(), DatabaseHelper.dbName);
     await databaseFactory.deleteDatabase(path);
 
     categoryDao = CategoryDao();

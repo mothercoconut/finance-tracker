@@ -61,24 +61,51 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-                    final newIncome = Income(
-                      amount: double.parse(_amountController.text),
-                      date: _selectedDate,
-                      source: _sourceController.text,
-                    );
+                  if (!_formKey.currentState!.validate()) return;
 
-                    await IncomeDao().insertIncome(newIncome);
+                  final recurring = await _askRecurring();
+                  if (recurring == null) return;
 
-                    if (!context.mounted) return;
-                    Navigator.pop(context, true);
-                  }
+                  final newIncome = Income(
+                    amount: double.parse(_amountController.text),
+                    date: _selectedDate,
+                    source: _sourceController.text,
+                    recurring: recurring,
+                  );
+
+                  await IncomeDao().insertIncome(newIncome);
+
+                  if (!context.mounted) return;
+                  Navigator.pop(context, true);
                 },
                 child: const Text('Save Income'),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Future<bool?> _askRecurring() {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Recurring or one-time?'),
+        content: const Text(
+          'Does this income happen regularly (like a paycheck), or was it a one-time amount?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('One-Time'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Recurring'),
+          ),
+        ],
       ),
     );
   }

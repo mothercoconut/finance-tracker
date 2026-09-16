@@ -22,7 +22,11 @@ class DatabaseHelper {
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
 
-  static const String _dbName = 'finance_tracker.db';
+  /// Overridable so tests can point each test file at its own database
+  /// file — `sqflite_common_ffi` resolves a fixed on-disk path by default,
+  /// and `flutter test` runs test files concurrently, so sharing this name
+  /// across files causes cross-test data contamination.
+  static String dbName = 'finance_tracker.db';
   static const int _dbVersion = 1;
 
   Database? _database;
@@ -33,7 +37,7 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     final factory = kIsWeb ? databaseFactoryFfiWeb : databaseFactory;
-    final path = kIsWeb ? _dbName : join(await getDatabasesPath(), _dbName);
+    final path = kIsWeb ? dbName : join(await getDatabasesPath(), dbName);
 
     return factory.openDatabase(
       path,

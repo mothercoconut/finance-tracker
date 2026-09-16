@@ -1,30 +1,49 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+// Smoke test for the app's actual home screen (the dashboard), run against
+// a real, empty SQLite database via sqflite_common_ffi so it exercises the
+// same DAOs the app uses at runtime.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:finance_tracker/database/database_helper.dart';
 import 'package:finance_tracker/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    DatabaseHelper.dbName = 'widget_test.db';
+  });
+
+  setUp(() async {
+    await DatabaseHelper.instance.close();
+    final path = join(await databaseFactory.getDatabasesPath(), DatabaseHelper.dbName);
+    await databaseFactory.deleteDatabase(path);
+  });
+
+  tearDownAll(() async {
+    await DatabaseHelper.instance.close();
+  });
+
+  testWidgets('Home screen starts at a zero balance with no transactions', (tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // sqflite_common_ffi does real file/isolate I/O for the initial load,
+    // which needs the real event loop — tester.pump() alone only drains
+    // Flutter's fake-async frame queue, so the loading spinner never
+    // resolves without runAsync.
+    while (find.byType(CircularProgressIndicator).evaluate().isNotEmpty) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+    }
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Finance Tracker'), findsOneWidget);
+    expect(find.text('Available Balance'), findsOneWidget);
+    expect(find.text('\$0.00'), findsOneWidget);
+    expect(find.text('Income'), findsOneWidget);
+    expect(find.text('Expense'), findsOneWidget);
+    expect(find.text('Trends'), findsOneWidget);
+    expect(find.text('No transactions yet'), findsOneWidget);
   });
 }
