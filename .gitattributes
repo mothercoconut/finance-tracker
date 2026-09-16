@@ -1,0 +1,18 @@
+# Normalise line endings so the build is identical on Windows and Linux CI.
+# Without this, a Windows checkout can commit gradlew with CRLF and the Linux
+# runner fails with "bad interpreter: No such file or directory".
+* text=auto eol=lf
+
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+gradlew text eol=lf
+*.sh    text eol=lf
+
+*.png      binary
+*.jpg      binary
+*.jar      binary
+*.keystore binary
+*.ttf      binary
+*.wasm     binary

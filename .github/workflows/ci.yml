@@ -1,0 +1,71 @@
+# Automated build for the personal finance tracker.
+#
+# WHY THIS EXISTS: project 3 is graded on having an automated build, but the
+# reason to want one is that three people are pushing to this repository at
+# once. A build that runs on every push tells whoever broke something that they
+# broke it, within a few minutes, instead of the team finding out on the night
+# the demo video is due.
+#
+# WHY THE FLUTTER VERSION IS PINNED rather than `latest`: `latest` means the
+# build can turn red overnight without anybody changing a line of code, and the
+# failure shows up on a reviewer's screen rather than the author's. Then nobody
+# can tell whether the code broke or the toolchain moved. 3.47.2 is what the
+# team develops against; when we want a newer one we change it here on purpose.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  FLUTTER_VERSION: 3.47.2
+
+jobs:
+  build:
+    name: Analyze, test and build
+    runs-on: ubuntu-latest
+    # A hung job otherwise burns quota until GitHub's six-hour ceiling.
+    timeout-minutes: 20
+
+    # THE FLUTTER APP IS NOT AT THE REPOSITORY ROOT. It lives in
+    # finance_tracker/, so every command below has to run from there or it
+    # fails looking for a pubspec.yaml that is one directory down.
+    defaults:
+      run:
+        working-directory: finance_tracker
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+
+      # The Android build needs a JDK, and the runner image ships several. Its
+      # default can shift when GitHub updates the image, so pin one.
+      - name: Install the Java toolchain the Android build needs
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install the pinned Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Resolve the project's dependencies
+        run: flutter pub get
+
+      - name: Prove the code has no analyzer findings
+        run: flutter analyze
+
+      # The database tests run against a real SQLite engine through
+      # sqflite_common_ffi, which works on the test VM with no emulator
+      # attached. That is why this step needs no Android device.
+      - name: Prove the database layer and the screens behave as specified
+        run: flutter test
+
+      - name: Prove the app still compiles into an Android package
+        run: flutter build apk --debug
