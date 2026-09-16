@@ -16,6 +16,13 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
   DateTime _selectedDate = DateTime.now();
 
   @override
+  void dispose() {
+    _amountController.dispose();
+    _sourceController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Add Income')),
@@ -61,9 +68,9 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                       source: _sourceController.text,
                     );
 
-                    // Calls your actual IncomeDao safely
                     await IncomeDao().insertIncome(newIncome);
 
+                    if (!mounted) return;
                     Navigator.pop(context, true);
                   }
                 },

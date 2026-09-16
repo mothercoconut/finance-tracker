@@ -14,7 +14,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
-  int _selectedCategoryId = 1; // Default fallback category ID
+  final int _selectedCategoryId = 1; // Default fallback category ID
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,9 +69,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       note: _noteController.text.isEmpty ? null : _noteController.text,
                     );
 
-                    // Calls your actual ExpenseDao safely
                     await ExpenseDao().insertExpense(newExpense);
 
+                    if (!mounted) return;
                     Navigator.pop(context, true);
                   }
                 },
