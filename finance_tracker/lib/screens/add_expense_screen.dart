@@ -64,14 +64,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   if (_formKey.currentState!.validate()) {
                     final newExpense = Expense(
                       amount: double.parse(_amountController.text),
-                      date: _selectedDate.toIso8601String(),
+                      date: _selectedDate,
                       categoryId: _selectedCategoryId,
                       note: _noteController.text.isEmpty ? null : _noteController.text,
                     );
 
                     await ExpenseDao().insertExpense(newExpense);
 
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     Navigator.pop(context, true);
                   }
                 },

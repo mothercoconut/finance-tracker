@@ -64,13 +64,13 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                   if (_formKey.currentState!.validate()) {
                     final newIncome = Income(
                       amount: double.parse(_amountController.text),
-                      date: _selectedDate.toIso8601String(),
+                      date: _selectedDate,
                       source: _sourceController.text,
                     );
 
                     await IncomeDao().insertIncome(newIncome);
 
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     Navigator.pop(context, true);
                   }
                 },
