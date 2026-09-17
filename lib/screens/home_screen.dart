@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../database/category_dao.dart';
 import '../database/expense_dao.dart';
 import '../database/income_dao.dart';
 import '../database/reports_dao.dart';
 import 'add_expense_screen.dart';
 import 'add_income_screen.dart';
+import 'categories_screen.dart';
 import 'graphs_screen.dart';
 
 class _Transaction {
@@ -95,6 +97,22 @@ class _HomeScreenState extends State<HomeScreen> {
     if (saved == true) _loadData();
   }
 
+  Future<void> _openCategories() async {
+    // Renaming a category changes the labels in the activity list below, so
+    // reload on return. Unconditionally: unlike the add screens, this one
+    // pops via the back button with no result, so there is no `true` to test.
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CategoriesScreen(
+          categoryDao: CategoryDao(),
+          reportsDao: ReportsDao(),
+        ),
+      ),
+    );
+    _loadData();
+  }
+
   void _openGraphs() {
     Navigator.push(
       context,
@@ -108,6 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFFF3F4F8),
       appBar: AppBar(
         title: const Text('Finance Tracker'),
+        actions: [
+          IconButton(
+            onPressed: _openCategories,
+            icon: const Icon(Icons.label_outline),
+            tooltip: 'Categories',
+          ),
+        ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton.extended(
