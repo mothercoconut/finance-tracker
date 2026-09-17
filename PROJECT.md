@@ -1,21 +1,51 @@
 # PROJECT
 
 Project number / name: Project 3 — Personal Finance Tracker
-Stack and target platform: Flutter 3.47.2 / Dart 3.13.2, SQLite via sqflite, Android (Java 21). The real app is in `finance_tracker/`. See the trap below about the second project at the repo root.
+Stack and target platform: Flutter 3.47.2 / Dart 3.13.2, SQLite via sqflite, fl_chart, Android (Java 21). **Since 2026-09-16 14:05 the app is at the REPO ROOT** — Vathana deleted `finance_tracker/` on main.
 Solo or team; my assigned area: Team of 3. Mine (mothercoconut/Allen) is GitHub + design + core UI and input screens (Dashboard, Add Expense, Add Income, Categories). Thava1206 (Vathana Sovann): database layer. TrentonH3: reports, transaction history, theme — per the task document, never confirmed by him.
 Trunk branch name: main
 Task board, and where my cards live: Trello — NOT CONFIRMED to exist. No URL has been produced. Graded deliverable.
-Build command: flutter build apk --debug          (run from finance_tracker/)
-Test command: flutter test                        (run from finance_tracker/)
-Analyze / lint command: flutter analyze           (run from finance_tracker/)
-CI configured (yes/no) and workflow path: yes — .github/workflows/ci.yml at the repo root, `working-directory: finance_tracker`. Triggers ONLY on push to main and PRs into main. **main is currently RED.**
+Build command: flutter build apk --debug          (run from repo root, on main)
+Test command: flutter test                        (run from repo root, on main)
+Analyze / lint command: flutter analyze           (run from repo root, on main)
+CI configured (yes/no) and workflow path: yes — .github/workflows/ci.yml. `working-directory` removed by Vathana in 0206961. Triggers ONLY on push to main and PRs into main. main GREEN at 0206961.
 Deliverables required for this project: git repo, demo video, task list, automated build
 Constraints (professor's requirements, must-differ-from-previous-app, etc.): teams of 3; app must differ from Paranoia Meter and flappymiata
 Repo: https://github.com/mothercoconut/finance-tracker (public)
 Due: Friday 2026-09-18 17:00
 Emulator AVD: csc4330 — start headless: /c/Android/Sdk/emulator/emulator.exe -avd csc4330 -no-window -no-boot-anim
 JDK: C:\Program Files\Microsoft\jdk-21.0.12.101-hotspot  (user JAVA_HOME points here since 2026-09-16)
-Last updated: 2026-09-16 07:52
+Last updated: 2026-09-16 20:12
+
+---
+
+# UPDATE — 2026-09-16 20:12 — main fixed by teammates; PR #3 now stranded
+
+**Where this conflicts with the 07:52 handoff below, this wins.**
+
+## VERIFIED — readings 2026-09-16 20:12
+
+- `main` at `0206961`, CI `success`: analyze `No issues found!`, `8 tests passed.`, debug APK built — *source: `gh run list --branch main --limit 1`; `gh run view <id> --log`*
+- Six commits landed directly on `main` today, no PRs: TrentonH3 `5e80998` `881ae88` `f010ddf` `6eb894a` (moved his screens to `lib/screens/`, fixed imports, added a spending graph + `fl_chart`); Vathana `bbff00c` "UI update" (deleted the whole `finance_tracker/` directory — the root copy is now the app — rewrote `lib/main.dart`, added `home_screen.dart` and `graphs_screen.dart`, reworked the add screens, touched `database_helper.dart`) and `0206961` (removed `working-directory` from ci.yml) — *source: `git log b5d6e41..origin/main`; `git show --stat`*
+- `main` now has: `HomeScreen` (balance, transaction list, Income/Expense/Trends buttons), `AddExpenseScreen` (with necessary/unnecessary toggle), `AddIncomeScreen` (recurring prompt), `GraphsScreen`. **No categories management screen. No onboarding.** `SettingsDao` is used by no screen — *source: `git ls-tree`; `git grep` on origin/main*
+- Their screens construct DAOs inline (`ReportsDao()`, `ExpenseDao()`), not injected — *source: `git grep` on origin/main*
+- PR #3 cannot merge: `modify/delete` conflicts on `finance_tracker/lib/main.dart` and `finance_tracker/test/widget_test.dart`, and every other file it adds lands in a `finance_tracker/` directory CI no longer builds — *source: `git merge-tree --write-tree origin/main origin/feat/screens`*
+- PR #3's two red checks (03:32Z, 12:55Z) both predate main going green (19:14Z) — *source: `gh run list --branch feat/screens`*
+- Branch protection still NOT enabled — *source: `gh api .../branches/main/protection` 404*
+
+## Retired from the 07:52 handoff
+
+- "main is RED at b5d6e41" — main is green at 0206961.
+- "Two pubspec.yaml files / always cd finance_tracker" — one pubspec, at root; `finance_tracker/` no longer exists on main.
+- Decision 1 "who fixes main" — moot; the teammates fixed it.
+- "PR #3 goes green once main is fixed" (INFERRED) — settled FALSE: main is fixed and PR #3 now conflicts structurally.
+- "Deleting the root duplicate alone won't unblock PR #3" — moot; the opposite deletion happened.
+
+## Blocked on the owner — asked 2026-09-16 20:12
+
+1. What to do with PR #3, given the team shipped Dashboard / Add Expense / Add Income on main.
+2. Branch protection on `main` (still recommended; today's direct pushes deleted 16.7k lines and edited CI with no review).
+3. Whether a Categories entry point may be added to Vathana's `home_screen.dart`, if Categories is ported.
 
 ---
 
