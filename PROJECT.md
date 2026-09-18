@@ -15,7 +15,7 @@ Repo: https://github.com/mothercoconut/finance-tracker (public)
 Due: **Friday 2026-09-18 17:00**
 Emulator AVD: csc4330 — headless: `/c/Android/Sdk/emulator/emulator.exe -avd csc4330 -no-window -no-boot-anim`; headed for recording: same without the flags
 JDK: C:\Program Files\Microsoft\jdk-21.0.12.101-hotspot
-Last updated: 2026-09-17 18:5x
+Last updated: 2026-09-17 19:10
 
 ---
 
@@ -25,7 +25,14 @@ Last updated: 2026-09-17 18:5x
 
 ## Right now
 
-Pull request #4 (`feat/categories`) holds the categories management screen, its entry point in the home screen, and three documentation files. CI was green on the first commit; a second run is in flight for the wiring commit. **Merging it needs the owner**, and so do two other GitHub writes — see "Blocked" below.
+The categories screen, its entry point in the home screen and four documentation files are merged to `main`, which is green. `main` is now protected: a pull request and a passing check are required. Nothing of this workstation's is outstanding. What remains for the deadline is the demo video, which is the owner's, and three unstarted features belonging to TrentonH3.
+
+## VERIFIED — readings 2026-09-17 ~19:10
+
+- `main` is at `2f712b4` ("Add categories management screen (#4)") and its CI is `success` — *source: `git log origin/main`; `gh run list --branch main --limit 1`*
+- Branch protection is ON: required check `Analyze, test and build`, pull request required with 0 approvals, force pushes and deletions disabled, `enforce_admins` false so the owner keeps an override — *source: `gh api repos/mothercoconut/finance-tracker/branches/main/protection`, read back after the owner applied it*
+- Pull request #4 is MERGED; #3 is CLOSED with a comment explaining what replaced it — *source: `gh pr list --state all`*
+- `lib/screens/categories_screen.dart`, `lib/widgets/money.dart`, `test/screens/`, `NOTES.md`, `TASKS.md`, `PROJECT.md` and `docs/demo-script.md` are all on `main` — *source: `git ls-tree -r --name-only origin/main`*
 
 ## VERIFIED — readings 2026-09-17 ~18:00–18:55
 
@@ -35,24 +42,19 @@ Pull request #4 (`feat/categories`) holds the categories management screen, its 
 - The categories screen file is byte-identical to the version that passed on `feat/screens` — *source: `git hash-object` vs `git rev-parse origin/feat/screens:...`, both `dfcb05c7`*
 - `home_screen.dart` changed by 25 insertions and 0 deletions — *source: `git diff --stat`*
 - The wiring was exercised on `emulator-5554`: the app bar icon opens the screen, and a renamed category re-renders in the home screen's activity list — *source: agent ran `flutter run` and drove it with `adb input`, with screenshots checksummed to catch a screenshot that raced the transition*
-- Branch protection is still NOT enabled — *source: the `PUT .../branches/main/protection` call refused by the permission classifier; never applied*
-- Pull request #3 carries a closing comment but is still OPEN — *source: `gh pr close 3` refused by the classifier*
+## Retired from the earlier part of this handoff
 
-## INFERRED
+Three items were listed as blocked at 18:55 — merging #4, closing #3, and enabling branch protection. All three are done; the readings above supersede them.
 
-- PR #4's second CI run passes — *settle with `gh pr checks 4`. The same tree was green on run one, and the only change since is additive and locally verified.*
+## The harness blocks GitHub writes from this session
 
-## Blocked — needs the owner's hands, not a decision
+Every write to GitHub — merging a pull request, closing one, changing repository settings — is refused by the permission classifier (`[Merge Without Review]`, `[External System Writes]`, `[Modify Shared Resources]`), whatever the owner has authorised in conversation. Reads, branch pushes, pull-request creation and pull-request comments all work.
 
-The permission classifier refuses GitHub writes from this session (`[External System Writes]`, `[Modify Shared Resources]`). The owner has authorised all three; the harness, not the owner, is the blocker.
-
-1. Merge PR #4 into `main`.
-2. `gh pr close 3` — the explanatory comment is already posted.
-3. Branch protection on `main`: require a pull request and the check `Analyze, test and build`, `enforce_admins: false` so the owner can still force something through before the deadline. Every problem in `NOTES.md`'s 09-16 entry came from a direct push to an unprotected trunk.
+So the shape of the work is: do everything up to the merge, then hand the owner the exact command. **Write commands for the owner in PowerShell**, not POSIX shell — their terminal is Windows PowerShell 5.1, where `&&` is a parse error and `printf` and `/tmp` do not exist. A bash heredoc pasted there fails silently enough to look like it worked. A permission rule for `gh` in the owner's settings would remove this friction permanently; offered, not yet set up.
 
 ## Owed / open
 
-- Demo video — the owner. Script at `docs/demo-script.md`; clear the emulator first with `adb shell pm clear com.example.finance_tracker`, because an agent left a $12.34 expense and a category renamed to "Groceries Renamed" on it.
+- Demo video — the owner, and the last deliverable still outstanding. Script at `docs/demo-script.md`; clear the emulator first with `adb shell pm clear com.example.finance_tracker`, because an agent left a $12.34 expense and a category renamed to "Groceries Renamed" on it.
 - Reports screen, transaction history, theme — TrentonH3, unstarted.
 - Starting-balance / first-run screen — unassigned, unstarted. `SettingsDao` exists and nothing calls it.
 - Four findings in `home_screen.dart`, reported to the owner and recorded here, **not fixed** because the file is a teammate's: negative balance renders as `$-12.34` while the rows below render `-$12.34`; money formatted inline although `lib/widgets/money.dart` exports `formatMoney`; `_loadData()` clears its loading flag only on the success path, so a database error leaves the spinner up forever; the expense query's lower bound is hardcoded to `DateTime(2000, 1, 1)`.
