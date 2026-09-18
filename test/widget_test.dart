@@ -1,13 +1,14 @@
 // Smoke test for the app's actual home screen (the dashboard), run against
 // a real, empty SQLite database via sqflite_common_ffi so it exercises the
 // same DAOs the app uses at runtime.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:finance_tracker/database/database_helper.dart';
-import 'package:finance_tracker/main.dart';
+import 'package:finance_tracker/screens/home_screen.dart';
 
 void main() {
   setUpAll(() {
@@ -18,7 +19,12 @@ void main() {
 
   setUp(() async {
     await DatabaseHelper.instance.close();
-    final path = join(await databaseFactory.getDatabasesPath(), DatabaseHelper.dbName);
+
+    final path = join(
+      await databaseFactory.getDatabasesPath(),
+      DatabaseHelper.dbName,
+    );
+
     await databaseFactory.deleteDatabase(path);
   });
 
@@ -26,24 +32,38 @@ void main() {
     await DatabaseHelper.instance.close();
   });
 
-  testWidgets('Home screen starts at a zero balance with no transactions', (tester) async {
-    await tester.pumpWidget(const MyApp());
+  testWidgets(
+    'Home screen starts at a zero balance with no transactions',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: HomeScreen(),
+        ),
+      );
 
-    // sqflite_common_ffi does real file/isolate I/O for the initial load,
-    // which needs the real event loop — tester.pump() alone only drains
-    // Flutter's fake-async frame queue, so the loading spinner never
-    // resolves without runAsync.
-    while (find.byType(CircularProgressIndicator).evaluate().isNotEmpty) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
-      await tester.pump();
-    }
+      // sqflite_common_ffi performs real database I/O, so allow the
+      // asynchronous database operations to complete.
+      while (
+        find.byType(CircularProgressIndicator).evaluate().isNotEmpty
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(
+            const Duration(milliseconds: 50),
+          ),
+        );
 
-    expect(find.text('Finance Tracker'), findsOneWidget);
-    expect(find.text('Available Balance'), findsOneWidget);
-    expect(find.text('\$0.00'), findsOneWidget);
-    expect(find.text('Income'), findsOneWidget);
-    expect(find.text('Expense'), findsOneWidget);
-    expect(find.text('Trends'), findsOneWidget);
-    expect(find.text('No transactions yet'), findsOneWidget);
-  });
+        await tester.pump();
+      }
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Finance Tracker'), findsOneWidget);
+      expect(find.text('Available Balance'), findsOneWidget);
+      expect(find.text('\$0.00'), findsOneWidget);
+      expect(find.text('Income'), findsOneWidget);
+      expect(find.text('Expense'), findsOneWidget);
+      expect(find.text('Trends'), findsOneWidget);
+      expect(find.text('No transactions yet'), findsOneWidget);
+    },
+  );
 }

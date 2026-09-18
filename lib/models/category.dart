@@ -1,20 +1,4 @@
-/// Whether a spending category is a "need" or a "want".
-///
-/// Stored in SQLite as the lowercase [name] (see [CategoryType.value] /
-/// [CategoryType.fromValue]) so the column stays human-readable.
-enum CategoryType {
-  necessary,
-  discretionary;
-
-  String get value => name;
-
-  static CategoryType fromValue(String value) {
-    return CategoryType.values.firstWhere(
-      (t) => t.value == value,
-      orElse: () => throw ArgumentError('Unknown category type: $value'),
-    );
-  }
-}
+enum CategoryType { income, expense, necessary, discretionary }
 
 class Category {
   final int? id;
@@ -31,22 +15,22 @@ class Category {
     );
   }
 
-  Map<String, Object?> toMap() {
-    return {
-      if (id != null) 'id': id,
-      'name': name,
-      'type': type.value,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'name': name,
+        'type': type.name,
+      };
 
-  factory Category.fromMap(Map<String, Object?> map) {
+  factory Category.fromMap(Map<String, dynamic> map) {
+    final raw = map['type']?.toString() ?? 'expense';
+    final type = CategoryType.values.firstWhere(
+      (e) => e.name == raw,
+      orElse: () => CategoryType.expense,
+    );
     return Category(
       id: map['id'] as int?,
-      name: map['name'] as String,
-      type: CategoryType.fromValue(map['type'] as String),
+      name: map['name']?.toString() ?? '',
+      type: type,
     );
   }
-
-  @override
-  String toString() => 'Category(id: $id, name: $name, type: $type)';
 }

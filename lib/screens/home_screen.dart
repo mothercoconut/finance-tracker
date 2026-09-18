@@ -4,6 +4,7 @@ import '../database/category_dao.dart';
 import '../database/expense_dao.dart';
 import '../database/income_dao.dart';
 import '../database/reports_dao.dart';
+import '../models/category.dart';
 import 'add_expense_screen.dart';
 import 'add_income_screen.dart';
 import 'categories_screen.dart';
@@ -45,10 +46,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     final balance = await ReportsDao().getCurrentBalance();
+
     final incomes = await IncomeDao().getAllIncome();
-    final expenses = await ExpenseDao().getExpensesWithCategoryInRange(
+
+    final expenses =
+        await ExpenseDao().getExpensesWithCategoryInRange(
       DateTime(2000, 1, 1),
-      DateTime.now().add(const Duration(days: 1)),
+      DateTime.now().add(
+        const Duration(days: 1),
+      ),
     );
 
     final transactions = <_Transaction>[
@@ -67,16 +73,22 @@ class _HomeScreenState extends State<HomeScreen> {
               ? entry.expense.note!
               : entry.categoryName,
           isIncome: false,
-          necessary: entry.categoryType == 'necessary',
+          necessary:
+              entry.categoryType == CategoryType.necessary,
         ),
-    ]..sort((a, b) => b.date.compareTo(a.date));
+    ]..sort(
+        (a, b) => b.date.compareTo(a.date),
+      );
 
     if (!mounted) return;
+
     setState(() {
       _balance = balance;
+
       _transactions
         ..clear()
         ..addAll(transactions);
+
       _isLoading = false;
     });
   }
@@ -84,23 +96,30 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openAddIncome() async {
     final saved = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const AddIncomeScreen()),
+      MaterialPageRoute(
+        builder: (_) => const AddIncomeScreen(),
+      ),
     );
-    if (saved == true) _loadData();
+
+    if (saved == true) {
+      _loadData();
+    }
   }
 
   Future<void> _openAddExpense() async {
     final saved = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+      MaterialPageRoute(
+        builder: (_) => const AddExpenseScreen(),
+      ),
     );
-    if (saved == true) _loadData();
+
+    if (saved == true) {
+      _loadData();
+    }
   }
 
   Future<void> _openCategories() async {
-    // Renaming a category changes the labels in the activity list below, so
-    // reload on return. Unconditionally: unlike the add screens, this one
-    // pops via the back button with no result, so there is no `true` to test.
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -110,13 +129,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+
     _loadData();
   }
 
   void _openGraphs() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const GraphsScreen()),
+      MaterialPageRoute(
+        builder: (_) => const GraphsScreen(),
+      ),
     );
   }
 
@@ -134,18 +156,26 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openGraphs,
         icon: const Icon(Icons.bar_chart),
         label: const Text('Trends'),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
           : RefreshIndicator(
               onRefresh: _loadData,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  96,
+                ),
                 children: [
                   _buildBalanceCard(),
                   const SizedBox(height: 20),
@@ -153,16 +183,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 24),
                   const Text(
                     'Recent Activity',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   if (_transactions.isEmpty)
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 32),
+                      padding: EdgeInsets.symmetric(
+                        vertical: 32,
+                      ),
                       child: Center(
                         child: Text(
                           'No transactions yet',
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(
+                            color: Colors.grey,
+                          ),
                         ),
                       ),
                     )
@@ -177,28 +214,30 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBalanceCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+      padding: const EdgeInsets.symmetric(
+        vertical: 28,
+        horizontal: 24,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: const LinearGradient(
-          colors: [Color(0xFF1F1C2C), Color(0xFF4A3AFF)],
+          colors: [
+            Color(0xFF1F1C2C),
+            Color(0xFF4A3AFF),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Available Balance',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -253,8 +292,12 @@ class _HomeScreenState extends State<HomeScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          padding: const EdgeInsets.symmetric(
+            vertical: 14,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
     );
@@ -262,38 +305,70 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _buildGroupedTransactions() {
     final widgets = <Widget>[];
+
     DateTime? lastDay;
 
     for (final tx in _transactions) {
-      final day = DateTime(tx.date.year, tx.date.month, tx.date.day);
+      final day = DateTime(
+        tx.date.year,
+        tx.date.month,
+        tx.date.day,
+      );
+
       if (lastDay == null || day != lastDay) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(top: 16, bottom: 8),
-          child: Text(
-            _formatDayLabel(day),
-            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(
+              top: 16,
+              bottom: 8,
+            ),
+            child: Text(
+              _formatDayLabel(day),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
           ),
-        ));
+        );
+
         lastDay = day;
       }
+
       widgets.add(_buildTransactionTile(tx));
     }
+
     return widgets;
   }
 
   String _formatDayLabel(DateTime day) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
+
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final yesterday =
+        today.subtract(const Duration(days: 1));
+
     if (day == today) return 'Today';
+
     if (day == yesterday) return 'Yesterday';
-    return DateFormat('MMM d, yyyy').format(day);
+
+    return DateFormat(
+      'MMM d, yyyy',
+    ).format(day);
   }
 
   Widget _buildTransactionTile(_Transaction tx) {
     final color = tx.isIncome
         ? Colors.green
-        : (tx.necessary ? Colors.blueGrey : Colors.redAccent);
+        : (tx.necessary
+            ? Colors.blueGrey
+            : Colors.redAccent);
+
     final sign = tx.isIncome ? '+' : '-';
 
     return Container(
@@ -302,40 +377,49 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
       child: Row(
         children: [
           CircleAvatar(
             backgroundColor: color.withValues(alpha: 0.15),
             child: Icon(
-              tx.isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+              tx.isIncome
+                  ? Icons.arrow_downward
+                  : Icons.arrow_upward,
               color: color,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
-                Text(tx.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  tx.label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 if (!tx.isIncome)
                   Text(
-                    tx.necessary ? 'Necessary' : 'Unnecessary',
-                    style: TextStyle(fontSize: 12, color: color),
+                    tx.necessary
+                        ? 'Necessary'
+                        : 'Unnecessary',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: color,
+                    ),
                   ),
               ],
             ),
           ),
           Text(
             '$sign\$${tx.amount.toStringAsFixed(2)}',
-            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),

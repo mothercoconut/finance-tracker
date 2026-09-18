@@ -4,13 +4,10 @@ import 'package:sqflite/sqflite.dart' show DatabaseException;
 import '../database/category_dao.dart';
 import '../database/reports_dao.dart';
 import '../models/category.dart';
-import '../widgets/money.dart';
+import '../models/category_total.dart';
 
-/// Manage spending categories, with the total spent against each one.
-///
-/// The list comes from [ReportsDao.getTotalsByCategory], which LEFT JOINs the
-/// expenses, so a category with no spending still appears (at $0.00) instead
-/// of vanishing from the screen you would use to delete it.
+String formatMoney(double amount) => '\$${amount.toStringAsFixed(2)}';
+
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({
     super.key,
@@ -26,10 +23,9 @@ class CategoriesScreen extends StatefulWidget {
 }
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
-  late Future<List<CategoryTotal>> _totals = widget.reportsDao.getTotalsByCategory();
+  late Future<List<CategoryTotal>> _totals =
+      widget.reportsDao.getTotalsByCategory();
 
-  /// Re-runs the query. Every mutation ends here rather than patching the
-  /// in-memory list, so what is on screen always came from the database.
   void _reload() {
     setState(() {
       _totals = widget.reportsDao.getTotalsByCategory();
@@ -39,23 +35,28 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   Future<void> _create() async {
     final draft = await showDialog<Category>(
       context: context,
-      builder: (context) => const _CategoryEditor(title: 'New category'),
+      builder: (context) => const _CategoryEditor(
+        title: 'New category',
+      ),
     );
-    if (draft == null || !mounted) {
-      return;
-    }
+
+    if (draft == null || !mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
+
     try {
       await widget.categoryDao.insertCategory(draft);
     } on DatabaseException catch (_) {
-      // `name` is UNIQUE in the schema, and the DAO inserts with
-      // ConflictAlgorithm.abort, so a duplicate name lands here.
       messenger.showSnackBar(
-        SnackBar(content: Text('There is already a category called "${draft.name}".')),
+        SnackBar(
+          content: Text(
+            'There is already a category called "${draft.name}".',
+          ),
+        ),
       );
       return;
     }
+
     if (mounted) {
       _reload();
     }
@@ -70,20 +71,26 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         initialType: existing.categoryType,
       ),
     );
-    if (draft == null || !mounted) {
-      return;
-    }
+
+    if (draft == null || !mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
+
     try {
-      // The editor dialog does not know the row id, so it is reattached here.
-      await widget.categoryDao.updateCategory(draft.copyWith(id: existing.categoryId));
+      await widget.categoryDao.updateCategory(
+        draft.copyWith(id: existing.categoryId),
+      );
     } on DatabaseException catch (_) {
       messenger.showSnackBar(
-        SnackBar(content: Text('There is already a category called "${draft.name}".')),
+        SnackBar(
+          content: Text(
+            'There is already a category called "${draft.name}".',
+          ),
+        ),
       );
       return;
     }
+
     if (mounted) {
       _reload();
     }
@@ -92,21 +99,17 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   Future<void> _delete(CategoryTotal target) async {
     final messenger = ScaffoldMessenger.of(context);
 
-    // Ask the database before offering to delete anything. A category with
-    // expenses behind it must never be removed: doing so would take the user's
-    // spending history for that category with it. The schema's ON DELETE
-    // RESTRICT would refuse anyway, but a foreign-key exception is not an
-    // explanation — this is.
-    final inUse = await widget.categoryDao.isCategoryInUse(target.categoryId);
-    if (!mounted) {
-      return;
-    }
+    final inUse =
+        await widget.categoryDao.isCategoryInUse(target.categoryId);
+
+    if (!mounted) return;
+
     if (inUse) {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Cannot delete "${target.categoryName}" — it still has expenses '
-            'recorded against it. Move or delete those expenses first.',
+            'Cannot delete "${target.categoryName}" — '
+            'it still has expenses recorded against it.',
           ),
         ),
       );
@@ -117,7 +120,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Delete "${target.categoryName}"?'),
-        content: const Text('This category has no expenses, so nothing else is affected.'),
+        content: const Text(
+          'This category has no expenses, so nothing else is affected.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -130,26 +135,23 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         ],
       ),
     );
-    if (confirmed != true || !mounted) {
-      return;
-    }
+
+    if (confirmed != true || !mounted) return;
 
     try {
       await widget.categoryDao.deleteCategory(target.categoryId);
     } on DatabaseException catch (_) {
-      // Backstop for the gap between the check above and this delete: an
-      // expense could have been recorded in between. The schema still refuses,
-      // and the user gets the same explanation rather than a crash.
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Cannot delete "${target.categoryName}" — expenses were recorded '
-            'against it while this screen was open.',
+            'Cannot delete "${target.categoryName}" — '
+            'expenses were recorded while open.',
           ),
         ),
       );
       return;
     }
+
     if (mounted) {
       _reload();
     }
@@ -158,7 +160,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Categories')),
+      appBar: AppBar(
+        title: const Text('Categories'),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _create,
         tooltip: 'New category',
@@ -168,22 +172,35 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         future: _totals,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Could not load categories: ${snapshot.error}'));
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
-          final totals = snapshot.data ?? const <CategoryTotal>[];
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Could not load categories: ${snapshot.error}',
+              ),
+            );
+          }
+
+          final totals =
+              snapshot.data ?? const <CategoryTotal>[];
+
           if (totals.isEmpty) {
-            return const Center(child: Text('No categories yet.'));
+            return const Center(
+              child: Text('No categories yet.'),
+            );
           }
 
           return ListView.separated(
             itemCount: totals.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
+            separatorBuilder: (context, index) =>
+                const Divider(height: 1),
             itemBuilder: (context, index) {
               final total = totals[index];
+
               return ListTile(
                 title: Text(total.categoryName),
                 subtitle: Text(
@@ -216,10 +233,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 }
 
-/// Name + type dialog, used for both create and edit.
-///
-/// Returns a [Category] with no id: the caller reattaches the id when editing,
-/// because the dialog has no business knowing about row identity.
 class _CategoryEditor extends StatefulWidget {
   const _CategoryEditor({
     required this.title,
@@ -237,9 +250,14 @@ class _CategoryEditor extends StatefulWidget {
 
 class _CategoryEditorState extends State<_CategoryEditor> {
   final _formKey = GlobalKey<FormState>();
+
   late final TextEditingController _nameController =
-      TextEditingController(text: widget.initialName ?? '');
-  late CategoryType _type = widget.initialType ?? CategoryType.necessary;
+      TextEditingController(
+    text: widget.initialName ?? '',
+  );
+
+  late CategoryType _type =
+      widget.initialType ?? CategoryType.necessary;
 
   @override
   void dispose() {
@@ -251,8 +269,12 @@ class _CategoryEditorState extends State<_CategoryEditor> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+
     Navigator.of(context).pop(
-      Category(name: _nameController.text.trim(), type: _type),
+      Category(
+        name: _nameController.text.trim(),
+        type: _type,
+      ),
     );
   }
 
@@ -268,14 +290,21 @@ class _CategoryEditorState extends State<_CategoryEditor> {
             TextFormField(
               controller: _nameController,
               autofocus: true,
-              decoration: const InputDecoration(labelText: 'Name'),
-              validator: (value) =>
-                  (value ?? '').trim().isEmpty ? 'Enter a name' : null,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+              ),
+              validator: (value) {
+                return (value ?? '').trim().isEmpty
+                    ? 'Enter a name'
+                    : null;
+              },
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<CategoryType>(
               initialValue: _type,
-              decoration: const InputDecoration(labelText: 'Type'),
+              decoration: const InputDecoration(
+                labelText: 'Type',
+              ),
               items: const [
                 DropdownMenuItem(
                   value: CategoryType.necessary,
@@ -286,8 +315,12 @@ class _CategoryEditorState extends State<_CategoryEditor> {
                   child: Text('Discretionary'),
                 ),
               ],
-              onChanged: (value) =>
-                  setState(() => _type = value ?? CategoryType.necessary),
+              onChanged: (value) {
+                setState(
+                  () => _type =
+                      value ?? CategoryType.necessary,
+                );
+              },
             ),
           ],
         ),
@@ -297,7 +330,10 @@ class _CategoryEditorState extends State<_CategoryEditor> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        TextButton(onPressed: _submit, child: const Text('Save')),
+        TextButton(
+          onPressed: _submit,
+          child: const Text('Save'),
+        ),
       ],
     );
   }
