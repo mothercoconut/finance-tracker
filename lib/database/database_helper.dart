@@ -22,12 +22,17 @@ class DatabaseHelper {
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
 
+<<<<<<< Updated upstream
   /// Overridable so tests can point each test file at its own database
   /// file — `sqflite_common_ffi` resolves a fixed on-disk path by default,
   /// and `flutter test` runs test files concurrently, so sharing this name
   /// across files causes cross-test data contamination.
   static String dbName = 'finance_tracker.db';
   static const int _dbVersion = 1;
+=======
+  static const String _dbName = 'finance_tracker.db';
+  static const int _dbVersion = 2; // Incremented for title migration
+>>>>>>> Stashed changes
 
   Database? _database;
 
@@ -77,6 +82,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE $tableExpense (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
         amount REAL NOT NULL CHECK (amount > 0),
         date TEXT NOT NULL,
         category_id INTEGER NOT NULL,
@@ -110,7 +116,9 @@ class DatabaseHelper {
   /// bump [_dbVersion]) whenever the schema changes; each block should be
   /// safe to run against real user data already on disk.
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // No migrations yet — this is version 1.
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE $tableExpense ADD COLUMN title TEXT;');
+    }
   }
 
   Future<void> _seedDefaultCategories(Database db) async {
