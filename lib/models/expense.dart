@@ -1,55 +1,35 @@
 class Expense {
   final int? id;
+  final String title;
   final double amount;
-  final DateTime date;
   final int categoryId;
-  final String? note;
+  final DateTime date;
 
-  const Expense({
+  Expense({
     this.id,
+    required this.title,
     required this.amount,
-    required this.date,
     required this.categoryId,
-    this.note,
+    required this.date,
   });
 
-  Expense copyWith({
-    int? id,
-    double? amount,
-    DateTime? date,
-    int? categoryId,
-    String? note,
-  }) {
-    return Expense(
-      id: id ?? this.id,
-      amount: amount ?? this.amount,
-      date: date ?? this.date,
-      categoryId: categoryId ?? this.categoryId,
-      note: note ?? this.note,
-    );
-  }
-
-  Map<String, Object?> toMap() {
+  Map<String, dynamic> toMap() {
     return {
-      if (id != null) 'id': id,
+      'id': id,
+      'title': title,
       'amount': amount,
-      'date': date.toIso8601String(),
       'category_id': categoryId,
-      'note': note,
+      'date': date.toIso8601String(),
     };
   }
 
-  factory Expense.fromMap(Map<String, Object?> map) {
+  factory Expense.fromMap(Map<String, dynamic> map) {
     return Expense(
       id: map['id'] as int?,
+      title: (map['title'] as String?) ?? 'Expense',
       amount: (map['amount'] as num).toDouble(),
-      date: DateTime.parse(map['date'] as String),
       categoryId: map['category_id'] as int,
-      note: map['note'] as String?,
+      date: DateTime.parse(map['date'] as String),
     );
   }
-
-  @override
-  String toString() =>
-      'Expense(id: $id, amount: $amount, date: $date, categoryId: $categoryId, note: $note)';
 }
