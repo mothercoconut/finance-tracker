@@ -24,12 +24,8 @@ Due: **Friday 2026-09-18, 17:00.**
 | Add income screen | TrentonH3, reworked by Vathana | `lib/screens/add_income_screen.dart` |
 | Spending trends / graphs screen | Vathana | `lib/screens/graphs_screen.dart` |
 | Work record for the demo and the kata | Allen | `NOTES.md` |
-
-## In progress
-
-| Task | Owner | State |
-|---|---|---|
-| Categories management — create, edit, delete, refuse delete while in use | Allen | Branch `feat/categories`. Screen and tests written; being rebuilt after a machine crash corrupted the screen file. Not yet merged. |
+| Categories management — create, edit, delete, refuse delete while in use | Allen | `lib/screens/categories_screen.dart`, 5 tests in `test/screens/`, opened from the home screen's app bar. Merged in PR #4. |
+| Branch protection on `main` — pull request and passing check required | Allen | `gh api repos/mothercoconut/finance-tracker/branches/main/protection` |
 
 ## Not started
 
@@ -41,12 +37,11 @@ Due: **Friday 2026-09-18, 17:00.**
 | Starting balance / first-run setup | unassigned | `SettingsDao` exists with `completeOnboarding`, `getStartingBalance`, `getMonthlyIncome`. No screen calls it, so `monthly_income` is stored and never read. |
 | Demo video | Allen | Script at `docs/demo-script.md`. |
 
-## Blocked
+## Closed out
 
-| Task | Owner | Blocker |
-|---|---|---|
-| Branch protection on `main` — require a pull request and a passing check | Allen | Needs a repository-settings change; see `NOTES.md` for why it matters. Four direct pushes to `main` on 09-16 broke the build for everyone and stranded an open pull request. |
-| Pull request #3 (`feat/screens`) | Allen | Targets the `finance_tracker/` directory, which no longer exists. Superseded by work already on `main` plus `feat/categories`. To be closed with a note, not merged. |
+| Task | Outcome |
+|---|---|
+| Pull request #3 (`feat/screens`) | Closed, not merged. It targeted the `finance_tracker/` directory, which no longer exists; its categories screen was ported to the root layout in PR #4 and everything else in it was superseded by work already on `main`. The branch is still on the remote if any of it is wanted back. |
 
 ---
 
@@ -67,3 +62,22 @@ that teammates' code gets reported, not edited.
 - **Fixed on 09-16:** `DatabaseHelper` hard-coded its database file name, so
   concurrently running test files shared one file and contaminated each
   other's data. The file name is now an overridable static.
+
+Found in `lib/screens/home_screen.dart` while adding the categories entry
+point, and likewise left alone:
+
+- **A negative balance renders as `$-12.34`** — the minus sign lands inside
+  the dollar sign. The transaction rows immediately below render `-$12.34`,
+  so the same screen shows two conventions at once.
+- **Money is formatted inline there**, while `lib/widgets/money.dart` exports
+  `formatMoney`, which wraps `NumberFormat.currency`. Using it fixes the
+  point above as a side effect.
+- **`_loadData()` has no error handling.** `_isLoading = false` is reached
+  only on the success path, so any database error leaves the spinner up
+  permanently and the pull-to-refresh future rejects. There is no failure
+  state a user can see.
+- **The expense query's lower bound is hardcoded to `DateTime(2000, 1, 1)`.**
+  An expense dated earlier would still count toward the balance while being
+  excluded from Recent Activity, so the card and the list would disagree with
+  no error. Latent — nobody has checked whether the date picker can reach a
+  pre-2000 date.

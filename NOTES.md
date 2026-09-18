@@ -142,6 +142,66 @@ The cost fell on pull request #3, which targets a directory that no longer
 exists and conflicts with `main` on two files. The work in it was not lost,
 but it cannot be merged as it stands.
 
-**Prevention, still not in place:** branch protection on `main` requiring a
-pull request and a passing check. Every problem in this entry was a direct
-push to an unprotected trunk.
+**Prevention, since put in place:** branch protection on `main`, requiring a
+pull request and a passing check. See the 09-17 entry. Every problem in this
+entry was a direct push to an unprotected trunk.
+
+---
+
+## 2026-09-17 — Categories management screen
+
+**Task.** `main` had no way to create, rename or delete a spending category.
+Port that screen from the stranded branch onto the current layout, wire it up,
+and merge it through a pull request.
+
+**Changed.** New: `lib/screens/categories_screen.dart`,
+`lib/widgets/money.dart`, `test/screens/test_support.dart`,
+`test/screens/categories_screen_test.dart`. Modified:
+`lib/screens/home_screen.dart`, +25 lines, no deletions. Documentation:
+`NOTES.md`, `TASKS.md`, `PROJECT.md`, `docs/demo-script.md`.
+
+The screen file needed no edits at all — it is byte-identical to the version
+written on 09-15, because its relative imports resolve the same way at the
+repository root. The test bootstrap did change: it now sets
+`DatabaseHelper.dbName` per test file, replacing the per-file temp-directory
+workaround, since the database layer made that name overridable on 09-16.
+
+The entry point is an app bar action on the home screen rather than a fourth
+button — the existing buttons all record or review activity, and an icon adds
+no text, so the home screen's exact-text test still holds.
+
+**Commands.** `flutter analyze` → `No issues found!`; `flutter test` →
+`00:03 +13: All tests passed!` (8 existing, 5 new). CI green on all three
+commits of pull request #4. Merged as `2f712b4`.
+
+Also run on the device, not just compiled: `flutter run -d emulator-5554`,
+driven with `adb input`, confirming the icon opens the screen and that
+renaming a category updates the home screen's activity list.
+
+**Problems and fixes.**
+
+- **A machine crash corrupted a source file in a way that looks like garbage,
+  not like damage.** `categories_screen.dart` came back with its size
+  recorded — 9,628 bytes — and every byte a NUL, because the metadata was
+  flushed and the contents were not. The analyzer reported 9,629 errors in one
+  file, all `Illegal character`. Fixed by rewriting the file from the blob
+  still in git; the restored file hashes identical to the one that had already
+  passed, so nothing was reconstructed by guesswork.
+- **A green test suite that proved nothing.** Deliberately removing the
+  `DatabaseException` backstop from the delete path left every test passing:
+  the ported tests covered the pre-check twice and the backstop never. A test
+  that defeats only the pre-check now covers it, so the two guards are tested
+  separately.
+- **A copied pattern that would have failed silently.** The obvious way to
+  wire the screen was the existing `Navigator.push<bool>` plus
+  `if (saved == true) _loadData()`. The categories screen exits by the back
+  button and never pops a result, so that guard is always false: it would have
+  compiled, analyzed clean, passed the suite, and shown stale category names.
+  The reload is unconditional for that reason, and the device run is what
+  proved it matters.
+
+**Result.** Pull request #4 merged. Pull request #3 closed with a comment
+recording what replaced it. Branch protection enabled on `main`: a pull
+request and the `Analyze, test and build` check are now required, force
+pushes and deletions are off, and administrator bypass is left on so the
+owner keeps an override before the deadline.
