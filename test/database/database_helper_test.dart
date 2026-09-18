@@ -1,14 +1,11 @@
-// Exercises the whole database layer (schema, CRUD, reports) against a
-// real SQLite engine via sqflite_common_ffi, so it runs on the desktop
-// test VM without an Android/Chrome target.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:finance_tracker/database/database_helper.dart';
 import 'package:finance_tracker/database/category_dao.dart';
-import 'package:finance_tracker/database/income_dao.dart';
 import 'package:finance_tracker/database/expense_dao.dart';
+import 'package:finance_tracker/database/income_dao.dart';
 import 'package:finance_tracker/database/reports_dao.dart';
 import 'package:finance_tracker/database/settings_dao.dart';
 import 'package:finance_tracker/models/category.dart';
@@ -22,141 +19,308 @@ void main() {
     DatabaseHelper.dbName = 'database_helper_test.db';
   });
 
-  late CategoryDao categoryDao;
-  late IncomeDao incomeDao;
-  late ExpenseDao expenseDao;
-  late ReportsDao reportsDao;
-  late SettingsDao settingsDao;
-
   setUp(() async {
-    // Start every test from a clean database.
     await DatabaseHelper.instance.close();
-    final path = join(await databaseFactory.getDatabasesPath(), DatabaseHelper.dbName);
+
+    final path = join(
+      await databaseFactory.getDatabasesPath(),
+      DatabaseHelper.dbName,
+    );
+
     await databaseFactory.deleteDatabase(path);
-
-    categoryDao = CategoryDao();
-    incomeDao = IncomeDao();
-    expenseDao = ExpenseDao();
-    reportsDao = ReportsDao();
-    settingsDao = SettingsDao();
   });
 
-  tearDownAll(() async {
-    await DatabaseHelper.instance.close();
-  });
+  tearDownAll(
+    () async => DatabaseHelper.instance.close(),
+  );
 
-  test('creating the database seeds default categories', () async {
-    final categories = await categoryDao.getAllCategories();
+  test('database seeds eight default categories', () async {
+    final categories =
+        await CategoryDao().getAllCategories();
+
     expect(categories.length, 8);
-    expect(categories.any((c) => c.name == 'Rent' && c.type == CategoryType.necessary), isTrue);
+
     expect(
-      categories.any((c) => c.name == 'Entertainment' && c.type == CategoryType.discretionary),
+      categories.any(
+        (c) =>
+            c.name == 'Rent' &&
+            c.type == CategoryType.necessary,
+      ),
+      isTrue,
+    );
+
+    expect(
+      categories.any(
+        (c) =>
+            c.name == 'Entertainment' &&
+            c.type == CategoryType.discretionary,
+      ),
       isTrue,
     );
   });
 
-  test('category CRUD round-trips', () async {
-    final id = await categoryDao.insertCategory(
-      const Category(name: 'Pets', type: CategoryType.discretionary),
+  test('category CRUD works', () async {
+    final dao = CategoryDao();
+
+    final id = await dao.insertCategory(
+      const Category(
+        name: 'Pets',
+        type: CategoryType.discretionary,
+      ),
     );
 
-    final fetched = await categoryDao.getCategoryById(id);
+    final fetched =
+        await dao.getCategoryById(id);
+
     expect(fetched?.name, 'Pets');
 
-    await categoryDao.updateCategory(fetched!.copyWith(name: 'Pet Care'));
-    final updated = await categoryDao.getCategoryById(id);
-    expect(updated?.name, 'Pet Care');
+    await dao.updateCategory(
+      fetched!.copyWith(
+        name: 'Pet Care',
+      ),
+    );
 
-    await categoryDao.deleteCategory(id);
-    expect(await categoryDao.getCategoryById(id), isNull);
+    expect(
+      (await dao.getCategoryById(id))?.name,
+      'Pet Care',
+    );
+
+    await dao.deleteCategory(id);
+
+    expect(
+      await dao.getCategoryById(id),
+      isNull,
+    );
   });
 
-  test('deleting a category that has expenses is rejected', () async {
-    final categories = await categoryDao.getAllCategories();
-    final rent = categories.firstWhere((c) => c.name == 'Rent');
+  test(
+    'category with expenses cannot be deleted',
+    () async {
+      final category =
+          (await CategoryDao().getAllCategories())
+              .firstWhere(
+        (c) => c.name == 'Rent',
+      );
 
-    await expenseDao.insertExpense(
-      Expense(amount: 1200, date: DateTime(2026, 1, 1), categoryId: rent.id!),
-    );
+      await ExpenseDao().insertExpense(
+        Expense(
+          amount: 1200,
+          date: DateTime(2026, 1, 1),
+          categoryId: category.id!,
+        ),
+      );
 
-    expect(await categoryDao.isCategoryInUse(rent.id!), isTrue);
-    expect(() => categoryDao.deleteCategory(rent.id!), throwsA(isA<DatabaseException>()));
-  });
+      expect(
+        await CategoryDao().isCategoryInUse(
+          category.id!,
+        ),
+        isTrue,
+      );
 
-  test('onboarding settings and current balance calculation', () async {
-    await settingsDao.completeOnboarding(startingBalance: 500, monthlyIncome: 3000);
-    expect(await settingsDao.isOnboardingComplete(), isTrue);
-    expect(await settingsDao.getStartingBalance(), 500);
+      expect(
+        CategoryDao().deleteCategory(
+          category.id!,
+        ),
+        throwsA(
+          isA<DatabaseException>(),
+        ),
+      );
+    },
+  );
 
-    await incomeDao.insertIncome(
-      Income(amount: 3000, date: DateTime(2026, 1, 1), source: 'Paycheck', recurring: true),
-    );
+  test(
+    'starting balance and transactions calculate current balance',
+    () async {
+      await SettingsDao().completeOnboarding(
+        startingBalance: 500,
+        monthlyIncome: 3000,
+      );
 
-    final categories = await categoryDao.getAllCategories();
-    final rent = categories.firstWhere((c) => c.name == 'Rent');
-    await expenseDao.insertExpense(
-      Expense(amount: 1200, date: DateTime(2026, 1, 2), categoryId: rent.id!),
-    );
+      expect(
+        await SettingsDao().isOnboardingComplete(),
+        isTrue,
+      );
 
-    // 500 starting + 3000 income - 1200 expense.
-    expect(await reportsDao.getCurrentBalance(), 2300);
-  });
+      expect(
+        await SettingsDao().getStartingBalance(),
+        500,
+      );
 
-  test('totals by category and necessary vs discretionary breakdown', () async {
-    final categories = await categoryDao.getAllCategories();
-    final rent = categories.firstWhere((c) => c.name == 'Rent'); // necessary
-    final fun = categories.firstWhere((c) => c.name == 'Entertainment'); // discretionary
+      await IncomeDao().insertIncome(
+        Income(
+          amount: 3000,
+          date: DateTime(2026, 1, 1),
+          source: 'Paycheck',
+          recurring: true,
+        ),
+      );
 
-    await expenseDao.insertExpense(
-      Expense(amount: 1200, date: DateTime(2026, 1, 5), categoryId: rent.id!),
-    );
-    await expenseDao.insertExpense(
-      Expense(amount: 80, date: DateTime(2026, 1, 6), categoryId: fun.id!, note: 'Movies'),
-    );
+      final rent =
+          (await CategoryDao().getAllCategories())
+              .firstWhere(
+        (c) => c.name == 'Rent',
+      );
 
-    final totals = await reportsDao.getTotalsByCategory();
-    final rentTotal = totals.firstWhere((t) => t.categoryName == 'Rent');
-    final funTotal = totals.firstWhere((t) => t.categoryName == 'Entertainment');
-    expect(rentTotal.total, 1200);
-    expect(funTotal.total, 80);
+      await ExpenseDao().insertExpense(
+        Expense(
+          amount: 1200,
+          date: DateTime(2026, 1, 2),
+          categoryId: rent.id!,
+        ),
+      );
 
-    final breakdown = await reportsDao.getNecessaryVsDiscretionary();
-    expect(breakdown.necessary, 1200);
-    expect(breakdown.discretionary, 80);
-  });
+      expect(
+        await ReportsDao().getCurrentBalance(),
+        2300,
+      );
+    },
+  );
 
-  test('expenses can be filtered by date range for transaction history', () async {
-    final categories = await categoryDao.getAllCategories();
-    final rent = categories.firstWhere((c) => c.name == 'Rent');
+  test(
+    'category totals and spending breakdown work',
+    () async {
+      final categories =
+          await CategoryDao().getAllCategories();
 
-    await expenseDao.insertExpense(
-      Expense(amount: 100, date: DateTime(2026, 1, 15), categoryId: rent.id!),
-    );
-    await expenseDao.insertExpense(
-      Expense(amount: 200, date: DateTime(2026, 2, 15), categoryId: rent.id!),
-    );
+      final rent = categories.firstWhere(
+        (c) => c.name == 'Rent',
+      );
 
-    final januaryExpenses = await expenseDao.getExpensesInRange(
-      DateTime(2026, 1, 1),
-      DateTime(2026, 1, 31, 23, 59, 59),
-    );
+      final fun = categories.firstWhere(
+        (c) => c.name == 'Entertainment',
+      );
 
-    expect(januaryExpenses.length, 1);
-    expect(januaryExpenses.first.amount, 100);
-  });
+      await ExpenseDao().insertExpense(
+        Expense(
+          amount: 1200,
+          date: DateTime(2026, 1, 5),
+          categoryId: rent.id!,
+        ),
+      );
 
-  test('database survives being reopened (app relaunch)', () async {
-    await settingsDao.completeOnboarding(startingBalance: 100, monthlyIncome: 1000);
-    await incomeDao.insertIncome(
-      Income(amount: 1000, date: DateTime(2026, 1, 1), source: 'Job'),
-    );
+      await ExpenseDao().insertExpense(
+        Expense(
+          amount: 80,
+          date: DateTime(2026, 1, 6),
+          categoryId: fun.id!,
+          note: 'Movies',
+        ),
+      );
 
-    // Simulate an app relaunch: close and reopen the database handle.
-    await DatabaseHelper.instance.close();
+      final totals =
+          await ReportsDao().getTotalsByCategory();
 
-    final reopenedSettings = SettingsDao();
-    final reopenedIncome = IncomeDao();
-    expect(await reopenedSettings.isOnboardingComplete(), isTrue);
-    expect(await reopenedIncome.getTotalIncome(), 1000);
-  });
+      expect(
+        totals
+            .firstWhere(
+              (t) => t.categoryName == 'Rent',
+            )
+            .total,
+        1200,
+      );
+
+      expect(
+        totals
+            .firstWhere(
+              (t) =>
+                  t.categoryName == 'Entertainment',
+            )
+            .total,
+        80,
+      );
+
+      final breakdown =
+          await ReportsDao().getNecessaryVsDiscretionary();
+
+      expect(
+        breakdown.necessary,
+        1200,
+      );
+
+      expect(
+        breakdown.discretionary,
+        80,
+      );
+    },
+  );
+
+  test(
+    'expenses can be filtered by date range',
+    () async {
+      final rent =
+          (await CategoryDao().getAllCategories())
+              .firstWhere(
+        (c) => c.name == 'Rent',
+      );
+
+      await ExpenseDao().insertExpense(
+        Expense(
+          amount: 100,
+          date: DateTime(2026, 1, 15),
+          categoryId: rent.id!,
+        ),
+      );
+
+      await ExpenseDao().insertExpense(
+        Expense(
+          amount: 200,
+          date: DateTime(2026, 2, 15),
+          categoryId: rent.id!,
+        ),
+      );
+
+      final january =
+          await ExpenseDao().getExpensesInRange(
+        DateTime(2026, 1, 1),
+        DateTime(
+          2026,
+          1,
+          31,
+          23,
+          59,
+          59,
+        ),
+      );
+
+      expect(
+        january.length,
+        1,
+      );
+
+      expect(
+        january.first.amount,
+        100,
+      );
+    },
+  );
+
+  test(
+    'data survives closing and reopening the database',
+    () async {
+      await SettingsDao().completeOnboarding(
+        startingBalance: 100,
+        monthlyIncome: 1000,
+      );
+
+      await IncomeDao().insertIncome(
+        Income(
+          amount: 1000,
+          date: DateTime(2026, 1, 1),
+          source: 'Job',
+        ),
+      );
+
+      await DatabaseHelper.instance.close();
+
+      expect(
+        await SettingsDao().isOnboardingComplete(),
+        isTrue,
+      );
+
+      expect(
+        await IncomeDao().getTotalIncome(),
+        1000,
+      );
+    },
+  );
 }

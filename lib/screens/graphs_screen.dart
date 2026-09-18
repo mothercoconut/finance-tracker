@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../database/expense_dao.dart';
 import '../database/income_dao.dart';
+import '../models/category.dart';
 
 class _DailyTotals {
   double income = 0;
@@ -20,11 +21,7 @@ class GraphsScreen extends StatefulWidget {
 class _GraphsScreenState extends State<GraphsScreen> {
   bool _isLoading = true;
   List<DateTime> _days = [];
-
-  /// Running balance if only necessary expenses are counted: income - necessary.
   List<double> _balanceNecessaryOnly = [];
-
-  /// Running balance with every expense counted: income - necessary - unnecessary.
   List<double> _balanceActual = [];
 
   @override
@@ -39,9 +36,7 @@ class _GraphsScreenState extends State<GraphsScreen> {
       DateTime(2000, 1, 1),
       DateTime.now().add(const Duration(days: 1)),
     );
-
     DateTime dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
-
     final byDay = <DateTime, _DailyTotals>{};
     for (final income in incomes) {
       byDay.putIfAbsent(dayOf(income.date), () => _DailyTotals()).income +=
@@ -51,32 +46,26 @@ class _GraphsScreenState extends State<GraphsScreen> {
       final totals =
           byDay.putIfAbsent(dayOf(entry.expense.date), () => _DailyTotals());
       totals.totalExpense += entry.expense.amount;
-      if (entry.categoryType == 'necessary') {
+      if (entry.categoryType == CategoryType.necessary) {
         totals.necessaryExpense += entry.expense.amount;
       }
     }
-
     final sortedDays = byDay.keys.toList()..sort();
-
     final days = <DateTime>[];
     final balanceNecessaryOnly = <double>[];
     final balanceActual = <double>[];
-
     var runningIncome = 0.0;
     var runningExpense = 0.0;
     var runningNecessary = 0.0;
-
     for (final day in sortedDays) {
       final totals = byDay[day]!;
       runningIncome += totals.income;
       runningExpense += totals.totalExpense;
       runningNecessary += totals.necessaryExpense;
-
       days.add(day);
       balanceNecessaryOnly.add(runningIncome - runningNecessary);
       balanceActual.add(runningIncome - runningExpense);
     }
-
     if (!mounted) return;
     setState(() {
       _days = days;
@@ -110,11 +99,6 @@ class _GraphsScreenState extends State<GraphsScreen> {
                       'Balance Over Time',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    const Text(
-                      'The gap between the two bars is what you could have saved '
-                      'by skipping non-essential purchases.',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
                     const SizedBox(height: 8),
                     _buildLegend(const [
                       _LegendItem('Balance (necessary only)', Colors.blueAccent),
@@ -135,12 +119,10 @@ class _GraphsScreenState extends State<GraphsScreen> {
     final allValues = [..._balanceNecessaryOnly, ..._balanceActual];
     final maxY = allValues.fold<double>(0, (m, v) => v > m ? v : m);
     final minY = allValues.fold<double>(0, (m, v) => v < m ? v : m);
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final perGroup = constraints.maxWidth / _days.length;
         final barWidth = (perGroup * 0.28).clamp(3.0, 22.0);
-
         return BarChart(
           BarChartData(
             maxY: maxY == 0 ? 1 : maxY * 1.15,

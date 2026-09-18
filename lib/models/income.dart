@@ -1,55 +1,33 @@
 class Income {
   final int? id;
   final double amount;
-  final DateTime date;
   final String source;
+  final DateTime date;
   final bool recurring;
 
   const Income({
     this.id,
     required this.amount,
-    required this.date,
     required this.source,
+    required this.date,
     this.recurring = false,
   });
 
-  Income copyWith({
-    int? id,
-    double? amount,
-    DateTime? date,
-    String? source,
-    bool? recurring,
-  }) {
-    return Income(
-      id: id ?? this.id,
-      amount: amount ?? this.amount,
-      date: date ?? this.date,
-      source: source ?? this.source,
-      recurring: recurring ?? this.recurring,
-    );
-  }
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'amount': amount,
+        'source': source,
+        'date': date.toIso8601String(),
+        'recurring': recurring ? 1 : 0,
+      };
 
-  Map<String, Object?> toMap() {
-    return {
-      if (id != null) 'id': id,
-      'amount': amount,
-      'date': date.toIso8601String(),
-      'source': source,
-      'recurring': recurring ? 1 : 0,
-    };
-  }
-
-  factory Income.fromMap(Map<String, Object?> map) {
+  factory Income.fromMap(Map<String, dynamic> map) {
     return Income(
       id: map['id'] as int?,
       amount: (map['amount'] as num).toDouble(),
-      date: DateTime.parse(map['date'] as String),
-      source: map['source'] as String,
-      recurring: (map['recurring'] as int) == 1,
+      source: map['source']?.toString() ?? '',
+      date: DateTime.parse(map['date'].toString()),
+      recurring: map['recurring'] == 1 || map['recurring'] == true,
     );
   }
-
-  @override
-  String toString() =>
-      'Income(id: $id, amount: $amount, date: $date, source: $source, recurring: $recurring)';
 }

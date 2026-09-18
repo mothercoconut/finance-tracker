@@ -1,55 +1,38 @@
 class Expense {
   final int? id;
+  final String title;
   final double amount;
-  final DateTime date;
   final int categoryId;
+  final DateTime date;
   final String? note;
 
   const Expense({
     this.id,
+    this.title = '',
     required this.amount,
-    required this.date,
     required this.categoryId,
+    required this.date,
     this.note,
   });
 
-  Expense copyWith({
-    int? id,
-    double? amount,
-    DateTime? date,
-    int? categoryId,
-    String? note,
-  }) {
-    return Expense(
-      id: id ?? this.id,
-      amount: amount ?? this.amount,
-      date: date ?? this.date,
-      categoryId: categoryId ?? this.categoryId,
-      note: note ?? this.note,
-    );
-  }
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'title': title,
+        'amount': amount,
+        'category_id': categoryId,
+        'date': date.toIso8601String(),
+        'note': note,
+      };
 
-  Map<String, Object?> toMap() {
-    return {
-      if (id != null) 'id': id,
-      'amount': amount,
-      'date': date.toIso8601String(),
-      'category_id': categoryId,
-      'note': note,
-    };
-  }
-
-  factory Expense.fromMap(Map<String, Object?> map) {
+  factory Expense.fromMap(Map<String, dynamic> map) {
+    final rawCategoryId = map['category_id'] ?? map['categoryId'];
     return Expense(
       id: map['id'] as int?,
+      title: map['title']?.toString() ?? map['name']?.toString() ?? '',
       amount: (map['amount'] as num).toDouble(),
-      date: DateTime.parse(map['date'] as String),
-      categoryId: map['category_id'] as int,
-      note: map['note'] as String?,
+      categoryId: (rawCategoryId as num).toInt(),
+      date: DateTime.parse(map['date'].toString()),
+      note: map['note']?.toString(),
     );
   }
-
-  @override
-  String toString() =>
-      'Expense(id: $id, amount: $amount, date: $date, categoryId: $categoryId, note: $note)';
 }
